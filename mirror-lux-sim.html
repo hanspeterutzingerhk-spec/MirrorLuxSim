@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mirror Lux Simulator — 140 Warm + 140 Cool</title>
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: #12171f;
+      --panel-2: #1a2130;
+      --border: #2a3548;
+      --text: #e8eef8;
+      --muted: #8b9bb4;
+      --warm: #ffb347;
+      --cool: #7ec8ff;
+      --accent: #6ee7b7;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --person: #c4b5a0;
+      --ring: #3d4f6a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.45;
+    }
+
+    header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0.75rem 1.5rem;
+      background: linear-gradient(180deg, #121820, var(--bg));
+    }
+
+    header h1 {
+      font-size: 1.15rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 0;
+      min-height: calc(100vh - 64px);
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .controls {
+      padding: 1.25rem;
+      border-right: 1px solid var(--border);
+      background: var(--panel);
+      overflow-y: auto;
+      max-height: calc(100vh - 64px);
+    }
+
+    @media (max-width: 900px) {
+      .controls { max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    .section {
+      margin-bottom: 1.35rem;
+    }
+
+    .section h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+      font-weight: 600;
+    }
+
+    .presets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.45rem;
+    }
+
+    .presets button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 0.55rem 0.5rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .presets button:hover {
+      border-color: #4a5d7a;
+      background: #222b3c;
+    }
+
+    .presets button.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(110, 231, 183, 0.25);
+      background: #1a2a28;
+    }
+
+    .presets button strong {
+      display: block;
+      font-size: 0.82rem;
+      margin-bottom: 0.1rem;
+    }
+
+    .presets button span {
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+
+    .slider-row {
+      margin-bottom: 0.9rem;
+    }
+
+    .slider-row label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.82rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .slider-row label .val {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+
+    .slider-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .hint {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.82rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .toggle-row input { accent-color: var(--accent); width: 1rem; height: 1rem; }
+
+    .metrics {
+      display: grid;
+      gap: 0.5rem;
+    }
+
+    .metric {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.7rem 0.85rem;
+    }
+
+    .metric .label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+
+    .metric .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+
+    .metric .sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .metric.warm .value { color: var(--warm); }
+    .metric.cool .value { color: var(--cool); }
+    .metric.total .value { color: #fff; }
+    .metric.exit .value { color: var(--accent); }
+    .metric.lux .value { color: #a78bfa; }
+
+    .status-bar {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      border: 1px solid var(--border);
+      background: #151c28;
+    }
+
+    .status-bar.ok { border-color: rgba(110, 231, 183, 0.4); color: var(--accent); }
+    .status-bar.low { border-color: rgba(251, 191, 36, 0.45); color: var(--warn); }
+    .status-bar.high { border-color: rgba(248, 113, 113, 0.45); color: var(--danger); }
+
+    .viz-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 520px;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 45%, #141c2a 0%, var(--bg) 70%);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      flex: 1;
+      min-height: 480px;
+      cursor: default;
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      font-size: 0.72rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .swatch.warm { background: var(--warm); box-shadow: 0 0 6px var(--warm); }
+    .swatch.cool { background: var(--cool); box-shadow: 0 0 6px var(--cool); }
+    .swatch.person { background: var(--person); }
+    .swatch.target { background: #a78bfa; }
+
+    footer {
+      padding: 0.65rem 1.25rem 1rem;
+      font-size: 0.7rem;
+      color: var(--muted);
+      border-top: 1px solid transparent;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mirror Lux Simulator</h1>
+    <p>140 warm (3000 K) + 140 cool (5600 K) · ring 148 × 48 cm, R10 cm corners · person at 60 cm · IMX258 skin-capture targets</p>
+  </header>
+
+  <div class="layout">
+    <aside class="controls">
+      <div class="section">
+        <h2>Power presets</h2>
+        <div class="presets" id="presets">
+          <button type="button" data-preset="suggested" class="active">
+            <strong>Suggested</strong>
+            <span>65–85 mA · ideal capture</span>
+          </button>
+          <button type="button" data-preset="mid">
+            <strong>~100 mA</strong>
+            <span>High-quality / short scan</span>
+          </button>
+          <button type="button" data-preset="full">
+            <strong>Max 150 mA</strong>
+            <span>Datasheet full drive</span>
+          </button>
+          <button type="button" data-preset="headroom">
+            <strong>Headroom 120 mA</strong>
+            <span>Test ceiling</span>
+          </button>
+          <button type="button" data-preset="custom">
+            <strong>Custom</strong>
+            <span>Use sliders below</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>LED drive</h2>
+        <div class="slider-row">
+          <label>
+            Current per LED
+            <span class="val" id="currentVal">75 mA</span>
+          </label>
+          <input type="range" id="current" min="20" max="150" step="1" value="75" />
+          <div class="hint">Nominal target band: 65–85 mA. Continuous 150 mA not recommended.</div>
+        </div>
+        <div class="slider-row">
+          <label>
+            Warm / cool mix
+            <span class="val" id="mixVal">50% warm</span>
+          </label>
+          <input type="range" id="mix" min="0" max="100" step="1" value="50" />
+          <div class="hint">Relative power split (both banks stay at 140 LEDs; scales drive share).</div>
+        </div>
+        <div class="toggle-row">
+          <input type="checkbox" id="linkCurrent" checked />
+          <label for="linkCurrent">Same current for warm &amp; cool banks</label>
+        </div>
+        <div class="slider-row" id="coolCurrentRow" style="opacity: 0.45; pointer-events: none;">
+          <label>
+            Cool bank current
+            <span class="val" id="coolCurrentVal">75 mA</span>
+          </label>
+          <input type="range" id="coolCurrent" min="20" max="150" step="1" value="75" />
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Optics &amp; geometry</h2>
+        <div class="slider-row">
+          <label>
+            Optical efficiency
+            <span class="val" id="effVal">62%</span>
+          </label>
+          <input type="range" id="efficiency" min="40" max="85" step="1" value="62" />
+          <div class="hint">Reflector + light guide + diffuser + mirror glass. ≥65% preferred.</div>
+        </div>
+        <div class="slider-row">
+          <label>
+            Standing distance
+            <span class="val" id="distVal">60 cm</span>
+          </label>
+          <input type="range" id="distance" min="40" max="100" step="1" value="60" />
+          <div class="hint">Model calibrated at 60 cm; lux scales ~1/d² (simplified).</div>
+        </div>
+        <div class="slider-row">
+          <label>
+            Aim / forward bias
+            <span class="val" id="aimVal">100%</span>
+          </label>
+          <input type="range" id="aim" min="50" max="100" step="1" value="100" />
+          <div class="hint">Diffuser that spills sideways reduces useful body lux.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Live output</h2>
+        <div class="metrics">
+          <div class="metric warm">
+            <div class="label">Warm LEDs (140 × 3000 K)</div>
+            <div class="value" id="warmLm">—</div>
+            <div class="sub" id="warmSub">raw LED lumens</div>
+          </div>
+          <div class="metric cool">
+            <div class="label">Cool LEDs (140 × 5600 K)</div>
+            <div class="value" id="coolLm">—</div>
+            <div class="sub" id="coolSub">raw LED lumens</div>
+          </div>
+          <div class="metric total">
+            <div class="label">Total raw LED output</div>
+            <div class="value" id="rawLm">—</div>
+            <div class="sub" id="powerSub">electrical ≈ — W</div>
+          </div>
+          <div class="metric exit">
+            <div class="label">Lumens exiting completed ring</div>
+            <div class="value" id="exitLm">—</div>
+            <div class="sub">after optics &amp; aim factor</div>
+          </div>
+          <div class="metric lux">
+            <div class="label">Average lux on body</div>
+            <div class="value" id="avgLux">—</div>
+            <div class="sub" id="luxDetail">torso / weakest corners</div>
+          </div>
+        </div>
+        <div class="status-bar ok" id="status">—</div>
+      </div>
+
+      <footer>
+        Model from ShapevsMirrorLux analysis: Luminus MP-3030-1100 points (65 / 150 mA),
+        ~270 lux avg per 1,000 lm exiting at 60 cm (Lambertian ring). Animation is illustrative.
+      </footer>
+    </aside>
+
+    <main class="viz-wrap">
+      <canvas id="scene" width="900" height="700"></canvas>
+      <div class="legend">
+        <span><i class="swatch warm"></i> 140× Warm 3000 K</span>
+        <span><i class="swatch cool"></i> 140× Cool 5600 K</span>
+        <span><i class="swatch person"></i> Subject ~1.8 × 0.6 m</span>
+        <span><i class="swatch target"></i> Target 1.2–1.5 klux avg</span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    /**
+     * Photometric model (ShapevsMirrorLux.txt)
+     * Luminus MP-3030-1100: 3000K 24lm@65mA / 52lm@150mA; 5600K 28lm@65mA / 60lm@150mA
+     * 1000 lm exiting ring → ~270 lux avg on 1.8×0.6 m body at 60 cm
+     */
+    const N_WARM = 140;
+    const N_COOL = 140;
+    const Vf = 3.0; // approx forward voltage for power estimate
+
+    // Lumen vs current: piecewise linear through 0 → 65 → 150 mA datasheet points
+    function lmPerLed(currentMa, lm65, lm150) {
+      const I = Math.max(0, currentMa);
+      if (I <= 65) return (lm65 / 65) * I;
+      return lm65 + ((lm150 - lm65) / (150 - 65)) * (I - 65);
+    }
+
+    function warmLmPerLed(ma) { return lmPerLed(ma, 24, 52); }
+    function coolLmPerLed(ma) { return lmPerLed(ma, 28, 60); }
+
+    // Ratios from analysis table at 5k lm: avg 1350, torso 1600, weak 840
+    const REF_EXIT_LM = 1000;
+    const REF_AVG_LUX_60 = 270;
+    const TORSO_RATIO = 1600 / 1350;
+    const WEAK_RATIO = 840 / 1350;
+
+    const state = {
+      current: 75,
+      coolCurrent: 75,
+      linkCurrent: true,
+      mix: 50, // % warm power share weight (0–100)
+      efficiency: 0.62,
+      distance: 60,
+      aim: 1.0,
+      preset: "suggested",
+    };
+
+    const el = (id) => document.getElementById(id);
+
+    function applyPreset(name) {
+      state.preset = name;
+      const map = {
+        suggested: { current: 75, cool: 75, link: true },
+        mid: { current: 100, cool: 100, link: true },
+        full: { current: 150, cool: 150, link: true },
+        headroom: { current: 120, cool: 120, link: true },
+        custom: null,
+      };
+      const p = map[name];
+      if (p) {
+        state.current = p.current;
+        state.coolCurrent = p.cool;
+        state.linkCurrent = p.link;
+        el("current").value = p.current;
+        el("coolCurrent").value = p.cool;
+        el("linkCurrent").checked = p.link;
+      }
+      document.querySelectorAll("#presets button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.preset === name);
+      });
+      updateCoolRow();
+      update();
+    }
+
+    function updateCoolRow() {
+      const row = el("coolCurrentRow");
+      if (state.linkCurrent) {
+        row.style.opacity = "0.45";
+        row.style.pointerEvents = "none";
+        state.coolCurrent = state.current;
+        el("coolCurrent").value = state.current;
+      } else {
+        row.style.opacity = "1";
+        row.style.pointerEvents = "auto";
+      }
+    }
+
+    function compute() {
+      // Mix: scale each bank's effective contribution (models CCT blend / dimming)
+      // At 50/50, both banks full. Skew reduces one bank's relative drive.
+      const warmWeight = (state.mix / 50);
+      const coolWeight = ((100 - state.mix) / 50);
+      // Cap weights so max bank isn't above 100% at extreme mix ends
+      const wScale = Math.min(1, warmWeight);
+      const cScale = Math.min(1, coolWeight);
+
+      const Iw = state.current;
+      const Ic = state.linkCurrent ? state.current : state.coolCurrent;
+
+      const warmRaw = N_WARM * warmLmPerLed(Iw) * wScale;
+      const coolRaw = N_COOL * coolLmPerLed(Ic) * cScale;
+      const raw = warmRaw + coolRaw;
+
+      const exitLm = raw * state.efficiency * state.aim;
+      // Inverse-square from 60 cm calibration
+      const distFactor = Math.pow(60 / state.distance, 2);
+      const avgLux = (exitLm / REF_EXIT_LM) * REF_AVG_LUX_60 * distFactor;
+      const torsoLux = avgLux * TORSO_RATIO;
+      const weakLux = avgLux * WEAK_RATIO;
+
+      // Electrical power estimate (both banks always 140 LEDs physically driven)
+      const Pwarm = N_WARM * (Iw / 1000) * Vf * wScale;
+      const Pcool = N_COOL * (Ic / 1000) * Vf * cScale;
+      const powerW = Pwarm + Pcool;
+
+      return { warmRaw, coolRaw, raw, exitLm, avgLux, torsoLux, weakLux, powerW, Iw, Ic };
+    }
+
+    function formatLm(n) {
+      if (n >= 1000) return (n / 1000).toFixed(2) + " k lm";
+      return Math.round(n) + " lm";
+    }
+
+    function formatLux(n) {
+      if (n >= 1000) return (n / 1000).toFixed(2) + " klux";
+      return Math.round(n) + " lux";
+    }
+
+    function statusFor(avg, weak) {
+      // Targets: avg 1200–1500, min 700–800; short mode up to 1800–2000; too high >2300
+      if (weak < 700 || avg < 1000) {
+        return {
+          cls: "low",
+          text: "Below capture target — raise current, efficiency, or aim. Min body lux should stay ≥700–800.",
+        };
+      }
+      if (avg >= 1200 && avg <= 1600 && weak >= 700) {
+        return {
+          cls: "ok",
+          text: "In recommended band for high-quality RGB skin capture (≈1.2–1.5 klux avg, min ≥700).",
+        };
+      }
+      if (avg > 1600 && avg <= 2100) {
+        return {
+          cls: "ok",
+          text: "Short high-quality scan range (≈1.8–2.0 klux). Fine briefly; may feel bright.",
+        };
+      }
+      if (avg > 2100) {
+        return {
+          cls: "high",
+          text: "Unnecessarily bright / high power — prefer more LEDs under-driven over full 150 mA continuous.",
+        };
+      }
+      return {
+        cls: "low",
+        text: "Marginal for skin-color capture — nudging toward 1.2–1.5 klux average is safer.",
+      };
+    }
+
+    function updateLabels() {
+      el("currentVal").textContent = state.current + " mA";
+      el("coolCurrentVal").textContent = (state.linkCurrent ? state.current : state.coolCurrent) + " mA";
+      el("mixVal").textContent = state.mix + "% warm / " + (100 - state.mix) + "% cool";
+      el("effVal").textContent = Math.round(state.efficiency * 100) + "%";
+      el("distVal").textContent = state.distance + " cm";
+      el("aimVal").textContent = Math.round(state.aim * 100) + "%";
+    }
+
+    function updateMetrics(r) {
+      el("warmLm").textContent = formatLm(r.warmRaw);
+      el("warmSub").textContent = N_WARM + " LEDs × " + warmLmPerLed(r.Iw).toFixed(1) + " lm @ " + r.Iw + " mA";
+      el("coolLm").textContent = formatLm(r.coolRaw);
+      el("coolSub").textContent = N_COOL + " LEDs × " + coolLmPerLed(r.Ic).toFixed(1) + " lm @ " + r.Ic + " mA";
+      el("rawLm").textContent = formatLm(r.raw);
+      el("powerSub").textContent = "electrical ≈ " + r.powerW.toFixed(0) + " W (≈3 Vf estimate)";
+      el("exitLm").textContent = formatLm(r.exitLm);
+      el("avgLux").textContent = formatLux(r.avgLux);
+      el("luxDetail").textContent =
+        "torso ≈ " + Math.round(r.torsoLux) + " lux · weakest ≈ " + Math.round(r.weakLux) + " lux · @ " + state.distance + " cm";
+
+      const st = statusFor(r.avgLux, r.weakLux);
+      const bar = el("status");
+      bar.className = "status-bar " + st.cls;
+      bar.textContent = st.text;
+    }
+
+    // ——— Canvas animation ———
+    const canvas = el("scene");
+    const ctx = canvas.getContext("2d");
+    let t0 = performance.now();
+    let lastResult = null;
+
+    function resize() {
+      const parent = canvas.parentElement;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = parent.clientWidth;
+      const h = Math.max(480, parent.clientHeight);
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function drawPerson(cx, cy, scale, lit) {
+      // Simple standing figure
+      const skin = `rgba(196, 181, 160, ${0.55 + lit * 0.45})`;
+      const body = `rgba(170, 155, 135, ${0.5 + lit * 0.5})`;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+
+      // Soft body glow from illumination
+      if (lit > 0.05) {
+        const g = ctx.createRadialGradient(0, -20, 10, 0, 0, 120);
+        g.addColorStop(0, `rgba(255, 230, 180, ${0.12 * lit})`);
+        g.addColorStop(0.5, `rgba(180, 210, 255, ${0.08 * lit})`);
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(0, 10, 70, 130, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Head
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.arc(0, -95, 18, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Torso
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.moveTo(-28, -70);
+      ctx.quadraticCurveTo(-32, 20, -22, 55);
+      ctx.lineTo(22, 55);
+      ctx.quadraticCurveTo(32, 20, 28, -70);
+      ctx.closePath();
+      ctx.fill();
+
+      // Arms
+      ctx.strokeStyle = body;
+      ctx.lineWidth = 10;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-26, -55);
+      ctx.quadraticCurveTo(-48, -10, -40, 30);
+      ctx.moveTo(26, -55);
+      ctx.quadraticCurveTo(48, -10, 40, 30);
+      ctx.stroke();
+
+      // Legs
+      ctx.beginPath();
+      ctx.moveTo(-12, 55);
+      ctx.lineTo(-16, 130);
+      ctx.moveTo(12, 55);
+      ctx.lineTo(16, 130);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Physical ring: 148 cm tall × 48 cm wide, 10 cm corner radii
+    const RING_H_CM = 148;
+    const RING_W_CM = 48;
+    const RING_R_CM = 10;
+    const N_LEDS = N_WARM + N_COOL; // 280, alternating warm/cool
+
+    /**
+     * Arc-length geometry for a rounded rectangle (axis-aligned, centered).
+     * Path starts at top-edge midpoint and goes clockwise.
+     * Returns total perimeter (cm) and a point sampler in canvas px when scaled.
+     */
+    function roundedRectPerimeterCm() {
+      const straightH = RING_W_CM - 2 * RING_R_CM; // top/bottom
+      const straightV = RING_H_CM - 2 * RING_R_CM; // left/right
+      const arc = (Math.PI / 2) * RING_R_CM;
+      // 2 horizontals + 2 verticals + 4 quarter-circles
+      const perimeter = 2 * straightH + 2 * straightV + 4 * arc;
+      return { perimeter, straightH, straightV, arc };
+    }
+
+    function pointOnRoundedRectCm(s) {
+      // s = distance along perimeter from top-center, clockwise, in cm
+      const { perimeter, straightH, straightV, arc } = roundedRectPerimeterCm();
+      let d = ((s % perimeter) + perimeter) % perimeter;
+      const hw = RING_W_CM / 2;
+      const hh = RING_H_CM / 2;
+      const r = RING_R_CM;
+      const halfTop = straightH / 2;
+
+      // 1) top straight: from center toward right
+      if (d <= halfTop) {
+        return { x: d, y: -hh, nx: 0, ny: -1 };
+      }
+      d -= halfTop;
+
+      // 2) top-right arc (center at hw-r, -hh+r): angles -π/2 → 0
+      if (d <= arc) {
+        const a = -Math.PI / 2 + d / r;
+        const cx0 = hw - r;
+        const cy0 = -hh + r;
+        return {
+          x: cx0 + r * Math.cos(a),
+          y: cy0 + r * Math.sin(a),
+          nx: Math.cos(a),
+          ny: Math.sin(a),
+        };
+      }
+      d -= arc;
+
+      // 3) right straight down
+      if (d <= straightV) {
+        return { x: hw, y: -hh + r + d, nx: 1, ny: 0 };
+      }
+      d -= straightV;
+
+      // 4) bottom-right arc: 0 → π/2
+      if (d <= arc) {
+        const a = 0 + d / r;
+        const cx0 = hw - r;
+        const cy0 = hh - r;
+        return {
+          x: cx0 + r * Math.cos(a),
+          y: cy0 + r * Math.sin(a),
+          nx: Math.cos(a),
+          ny: Math.sin(a),
+        };
+      }
+      d -= arc;
+
+      // 5) bottom straight left
+      if (d <= straightH) {
+        return { x: hw - r - d, y: hh, nx: 0, ny: 1 };
+      }
+      d -= straightH;
+
+      // 6) bottom-left arc: π/2 → π
+      if (d <= arc) {
+        const a = Math.PI / 2 + d / r;
+        const cx0 = -hw + r;
+        const cy0 = hh - r;
+        return {
+          x: cx0 + r * Math.cos(a),
+          y: cy0 + r * Math.sin(a),
+          nx: Math.cos(a),
+          ny: Math.sin(a),
+        };
+      }
+      d -= arc;
+
+      // 7) left straight up
+      if (d <= straightV) {
+        return { x: -hw, y: hh - r - d, nx: -1, ny: 0 };
+      }
+      d -= straightV;
+
+      // 8) top-left arc: π → 3π/2
+      if (d <= arc) {
+        const a = Math.PI + d / r;
+        const cx0 = -hw + r;
+        const cy0 = -hh + r;
+        return {
+          x: cx0 + r * Math.cos(a),
+          y: cy0 + r * Math.sin(a),
+          nx: Math.cos(a),
+          ny: Math.sin(a),
+        };
+      }
+      d -= arc;
+
+      // 9) top straight remaining: from left end to center
+      return { x: -hw + r + d, y: -hh, nx: 0, ny: -1 };
+    }
+
+    function strokeRoundedRectPath(ctx, cx, cy, halfW, halfH, rPx) {
+      // Outer path matching canvas rounded-rect of half-sizes halfW/halfH
+      const left = cx - halfW;
+      const right = cx + halfW;
+      const top = cy - halfH;
+      const bottom = cy + halfH;
+      const rr = Math.min(rPx, halfW, halfH);
+      ctx.beginPath();
+      ctx.moveTo(left + rr, top);
+      ctx.lineTo(right - rr, top);
+      ctx.arcTo(right, top, right, top + rr, rr);
+      ctx.lineTo(right, bottom - rr);
+      ctx.arcTo(right, bottom, right - rr, bottom, rr);
+      ctx.lineTo(left + rr, bottom);
+      ctx.arcTo(left, bottom, left, bottom - rr, rr);
+      ctx.lineTo(left, top + rr);
+      ctx.arcTo(left, top, left + rr, top, rr);
+      ctx.closePath();
+    }
+
+    // Cache LED positions when layout size changes
+    let ledCache = { key: "", points: [] };
+
+    function getLedPoints(cx, cy, scalePxPerCm) {
+      const key = [cx, cy, scalePxPerCm, N_LEDS].join("|");
+      if (ledCache.key === key) return ledCache.points;
+      const { perimeter } = roundedRectPerimeterCm();
+      const pitch = perimeter / N_LEDS;
+      const points = [];
+      for (let i = 0; i < N_LEDS; i++) {
+        // Offset by half pitch so LEDs sit mid-segment, not on start point
+        const p = pointOnRoundedRectCm(i * pitch + pitch * 0.5);
+        points.push({
+          x: cx + p.x * scalePxPerCm,
+          y: cy + p.y * scalePxPerCm,
+          isWarm: i % 2 === 0, // 140 warm + 140 cool alternating
+        });
+      }
+      ledCache = { key, points };
+      return points;
+    }
+
+    function draw(now) {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      const t = (now - t0) / 1000;
+      const r = lastResult || compute();
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Floor grid
+      ctx.strokeStyle = "rgba(80, 100, 130, 0.12)";
+      ctx.lineWidth = 1;
+      const horizon = h * 0.82;
+      for (let i = 0; i < 12; i++) {
+        const y = horizon - i * 28;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      const cx = w * 0.5;
+      const cy = h * 0.48;
+
+      // Fit 148×48 cm ring in view (leave margin for labels / glow)
+      const margin = 56;
+      const scalePxPerCm = Math.min(
+        (w - margin * 2) / RING_W_CM,
+        (h - margin * 2) / RING_H_CM
+      );
+      const halfW = (RING_W_CM / 2) * scalePxPerCm;
+      const halfH = (RING_H_CM / 2) * scalePxPerCm;
+      const rPx = RING_R_CM * scalePxPerCm;
+
+      // Distance / geometry label
+      ctx.fillStyle = "rgba(139, 155, 180, 0.9)";
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        "ring " + RING_H_CM + " × " + RING_W_CM + " cm · R" + RING_R_CM + " cm · subject " + state.distance + " cm",
+        cx,
+        h * 0.07
+      );
+      ctx.fillText("280 LEDs · 140 warm + 140 cool · even pitch on perimeter", cx, h * 0.07 + 16);
+
+      // Illumination intensity 0–1 for visual (normalize around 1500 lux)
+      const lit = Math.min(1.2, r.avgLux / 1500);
+      const warmFrac = state.mix / 100;
+      const coolFrac = 1 - warmFrac;
+
+      // Blend light color
+      const lightR = Math.round(255 * warmFrac + 120 * coolFrac);
+      const lightG = Math.round(180 * warmFrac + 200 * coolFrac);
+      const lightB = Math.round(70 * warmFrac + 255 * coolFrac);
+
+      // Ambient room darken / lighten
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.35 - lit * 0.2})`;
+      ctx.fillRect(0, 0, w, h);
+
+      const leds = getLedPoints(cx, cy, scalePxPerCm);
+      const pulse = 0.85 + 0.15 * Math.sin(t * 2.2);
+
+      // Light rays from every LED toward person (thin — 280 sources)
+      for (let i = 0; i < leds.length; i++) {
+        const p = leds[i];
+        const isWarm = p.isWarm;
+        const bankOn = isWarm ? warmFrac > 0.02 : coolFrac > 0.02;
+        if (!bankOn) continue;
+
+        const col = isWarm
+          ? `rgba(255, 179, 71, ${0.04 + 0.1 * lit * pulse * (0.5 + warmFrac)})`
+          : `rgba(126, 200, 255, ${0.04 + 0.1 * lit * pulse * (0.5 + coolFrac)})`;
+
+        const phase = t * 1.5 + i * 0.04;
+        const reach = 0.5 + 0.1 * Math.sin(phase);
+        const mx = p.x + (cx - p.x) * reach;
+        const my = p.y + (cy - p.y) * reach;
+
+        const grad = ctx.createLinearGradient(p.x, p.y, mx, my);
+        grad.addColorStop(0, col);
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 0.9 + lit * 1.2;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(mx, my);
+        ctx.stroke();
+      }
+
+      // Person
+      const personScale = Math.min(halfW / 70, halfH / 160);
+      drawPerson(cx, cy + 10, personScale, Math.min(1, lit));
+
+      // Lux heatmap overlay on body
+      if (lit > 0.02) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        const hg = ctx.createLinearGradient(cx, cy - 110 * personScale, cx, cy + 140 * personScale);
+        const aTorso = Math.min(0.35, (r.torsoLux / 2000) * 0.35);
+        const aWeak = Math.min(0.2, (r.weakLux / 2000) * 0.25);
+        hg.addColorStop(0, `rgba(${lightR},${lightG},${lightB},${aWeak})`);
+        hg.addColorStop(0.35, `rgba(${lightR},${lightG},${lightB},${aTorso})`);
+        hg.addColorStop(0.55, `rgba(${lightR},${lightG},${lightB},${aTorso})`);
+        hg.addColorStop(1, `rgba(${lightR},${lightG},${lightB},${aWeak})`);
+        ctx.fillStyle = hg;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 5, 55 * personScale, 130 * personScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // LED ring frame (rounded rectangle matching 148×48, R10)
+      ctx.strokeStyle = "rgba(61, 79, 106, 0.95)";
+      ctx.lineWidth = Math.max(8, 3.5 * scalePxPerCm);
+      strokeRoundedRectPath(ctx, cx, cy, halfW, halfH, rPx);
+      ctx.stroke();
+
+      ctx.strokeStyle = "rgba(100, 120, 150, 0.45)";
+      ctx.lineWidth = 1.5;
+      strokeRoundedRectPath(ctx, cx, cy, halfW + 8, halfH + 8, rPx + 4);
+      ctx.stroke();
+      strokeRoundedRectPath(ctx, cx, cy, halfW - 7, halfH - 7, Math.max(1, rPx - 4));
+      ctx.stroke();
+
+      // All 280 LED dots: 140 warm + 140 cool alternating
+      const ledR = Math.max(1.6, Math.min(3.4, scalePxPerCm * 0.55));
+      for (let i = 0; i < leds.length; i++) {
+        const p = leds[i];
+        const isWarm = p.isWarm;
+        const intensity = lit * pulse * (isWarm ? 0.5 + warmFrac : 0.5 + coolFrac);
+        const base = isWarm ? [255, 179, 71] : [126, 200, 255];
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, ledR + intensity * 1.4, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${base[0]},${base[1]},${base[2]},${0.5 + intensity * 0.5})`;
+        ctx.fill();
+        if (intensity > 0.2) {
+          ctx.shadowColor = `rgb(${base[0]},${base[1]},${base[2]})`;
+          ctx.shadowBlur = 4 + intensity * 10;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, ledR * 0.55, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
+      }
+
+      // Dimension callouts
+      ctx.strokeStyle = "rgba(139, 155, 180, 0.45)";
+      ctx.fillStyle = "rgba(139, 155, 180, 0.85)";
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.lineWidth = 1;
+      // Height
+      const dimX = cx + halfW + 22;
+      ctx.beginPath();
+      ctx.moveTo(dimX, cy - halfH);
+      ctx.lineTo(dimX, cy + halfH);
+      ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.fillText(RING_H_CM + " cm", dimX + 6, cy);
+      // Width
+      const dimY = cy + halfH + 20;
+      ctx.beginPath();
+      ctx.moveTo(cx - halfW, dimY);
+      ctx.lineTo(cx + halfW, dimY);
+      ctx.stroke();
+      ctx.textAlign = "center";
+      ctx.fillText(RING_W_CM + " cm  ·  corner R " + RING_R_CM + " cm", cx, dimY + 14);
+
+      // HUD callouts
+      const boxX = w - 200;
+      const boxY = 24;
+      ctx.fillStyle = "rgba(18, 23, 31, 0.82)";
+      ctx.strokeStyle = "rgba(42, 53, 72, 0.9)";
+      ctx.lineWidth = 1;
+      roundRect(ctx, boxX, boxY, 180, 122, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.textAlign = "left";
+      ctx.font = "600 11px system-ui, sans-serif";
+      ctx.fillStyle = "#8b9bb4";
+      ctx.fillText("ON PERSON", boxX + 14, boxY + 22);
+      ctx.font = "700 22px system-ui, sans-serif";
+      ctx.fillStyle = "#a78bfa";
+      ctx.fillText(formatLux(r.avgLux), boxX + 14, boxY + 50);
+      ctx.font = "12px system-ui, sans-serif";
+      ctx.fillStyle = "#e8eef8";
+      ctx.fillText("exit " + formatLm(r.exitLm), boxX + 14, boxY + 74);
+      ctx.fillStyle = "#8b9bb4";
+      ctx.fillText(r.Iw + (r.Iw !== r.Ic ? "/" + r.Ic : "") + " mA · " + Math.round(state.efficiency * 100) + "% η", boxX + 14, boxY + 94);
+      ctx.fillStyle = "#ffb347";
+      ctx.fillText("140 warm", boxX + 14, boxY + 112);
+      ctx.fillStyle = "#7ec8ff";
+      ctx.fillText("140 cool", boxX + 90, boxY + 112);
+
+      // Target band indicator bar
+      const barX = 24;
+      const barY = h - 48;
+      const barW = Math.min(280, w - 48);
+      ctx.fillStyle = "rgba(18, 23, 31, 0.75)";
+      roundRect(ctx, barX, barY - 8, barW, 36, 8);
+      ctx.fill();
+
+      // Scale 0–3000 lux
+      const maxLuxScale = 3000;
+      const targetStart = 1200 / maxLuxScale;
+      const targetEnd = 1500 / maxLuxScale;
+      ctx.fillStyle = "rgba(80, 90, 110, 0.5)";
+      roundRect(ctx, barX + 10, barY + 6, barW - 20, 8, 4);
+      ctx.fill();
+      // target zone
+      ctx.fillStyle = "rgba(110, 231, 183, 0.35)";
+      ctx.fillRect(barX + 10 + (barW - 20) * targetStart, barY + 6, (barW - 20) * (targetEnd - targetStart), 8);
+      // marker
+      const mxx = barX + 10 + (barW - 20) * Math.min(1, r.avgLux / maxLuxScale);
+      ctx.fillStyle = "#a78bfa";
+      ctx.beginPath();
+      ctx.moveTo(mxx, barY + 2);
+      ctx.lineTo(mxx + 5, barY + 10);
+      ctx.lineTo(mxx - 5, barY + 10);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#8b9bb4";
+      ctx.textAlign = "left";
+      ctx.fillText("0", barX + 10, barY + 28);
+      ctx.textAlign = "center";
+      ctx.fillText("target 1.2–1.5k", barX + 10 + (barW - 20) * 0.45, barY + 28);
+      ctx.textAlign = "right";
+      ctx.fillText("3k lux", barX + barW - 10, barY + 28);
+
+      // Zone labels on ring
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillStyle = "rgba(139,155,180,0.75)";
+      ctx.textAlign = "center";
+      ctx.fillText("TOP", cx, cy - halfH - 14);
+      ctx.fillText("BOTTOM", cx, cy + halfH + 36);
+      ctx.textAlign = "right";
+      ctx.fillText("LEFT", cx - halfW - 12, cy + 4);
+      ctx.textAlign = "left";
+      ctx.fillText("RIGHT", cx + halfW + 12, cy + 4);
+
+      requestAnimationFrame(draw);
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function update() {
+      updateLabels();
+      lastResult = compute();
+      updateMetrics(lastResult);
+    }
+
+    // Wire controls
+    el("current").addEventListener("input", (e) => {
+      state.current = +e.target.value;
+      if (state.linkCurrent) state.coolCurrent = state.current;
+      state.preset = "custom";
+      document.querySelectorAll("#presets button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.preset === "custom");
+      });
+      updateCoolRow();
+      update();
+    });
+
+    el("coolCurrent").addEventListener("input", (e) => {
+      state.coolCurrent = +e.target.value;
+      state.preset = "custom";
+      document.querySelectorAll("#presets button").forEach((b) => {
+        b.classList.toggle("active", b.dataset.preset === "custom");
+      });
+      update();
+    });
+
+    el("linkCurrent").addEventListener("change", (e) => {
+      state.linkCurrent = e.target.checked;
+      updateCoolRow();
+      update();
+    });
+
+    el("mix").addEventListener("input", (e) => {
+      state.mix = +e.target.value;
+      update();
+    });
+
+    el("efficiency").addEventListener("input", (e) => {
+      state.efficiency = +e.target.value / 100;
+      update();
+    });
+
+    el("distance").addEventListener("input", (e) => {
+      state.distance = +e.target.value;
+      update();
+    });
+
+    el("aim").addEventListener("input", (e) => {
+      state.aim = +e.target.value / 100;
+      update();
+    });
+
+    document.querySelectorAll("#presets button").forEach((btn) => {
+      btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+    });
+
+    window.addEventListener("resize", resize);
+
+    resize();
+    applyPreset("suggested");
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
