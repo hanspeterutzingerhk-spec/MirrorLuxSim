@@ -428,7 +428,12 @@
      */
     const N_WARM = 140;
     const N_COOL = 140;
-    const Vf = 3.0; // approx forward voltage for power estimate
+    // heat.txt: LED power treats Vf≈3.0 V; 65 mA → 54.6 W for 280 LEDs
+    const Vf = 3.0;
+    // heat.txt: 1 kg internal + 1 kg outer Al frame, c = 900 J/(kg·°C)
+    const HEAT_C_INTERNAL = 1.0 * 900; // J/°C — internal structure only
+    const HEAT_C_COMBINED = 2.0 * 900; // J/°C — after frame equalization
+    const HEAT_SCAN_SEC = 10; // scan duration for ΔT
 
     // Lumen vs current: piecewise linear through 0 → 65 → 150 mA datasheet points
     function lmPerLed(currentMa, lm65, lm150) {
@@ -520,12 +525,23 @@
       const torsoLux = avgLux * TORSO_RATIO;
       const weakLux = avgLux * WEAK_RATIO;
 
-      // Electrical power estimate (both banks always 140 LEDs physically driven)
+      // Electrical power = heat (heat.txt: all LED power treated as heat)
       const Pwarm = N_WARM * (Iw / 1000) * Vf * wScale;
       const Pcool = N_COOL * (Ic / 1000) * Vf * cScale;
       const powerW = Pwarm + Pcool;
 
-      return { warmRaw, coolRaw, raw, exitLm, avgLux, torsoLux, weakLux, powerW, Iw, Ic };
+      // Frame heat per 10 s scan (heat.txt)
+      const energyJ = powerW * HEAT_SCAN_SEC;
+      const riseInternalC = energyJ / HEAT_C_INTERNAL; // 1 kg internal initially
+      const riseCombinedC = energyJ / HEAT_C_COMBINED; // 2 kg after equalization
+      // Local Al under LED PCB: roughly +1.5–3°C above internal average (heat.txt)
+      const riseLocalLoC = riseInternalC + 1.5;
+      const riseLocalHiC = riseInternalC + 3.0;
+
+      return {
+        warmRaw, coolRaw, raw, exitLm, avgLux, torsoLux, weakLux, powerW, Iw, Ic,
+        energyJ, riseInternalC, riseCombinedC, riseLocalLoC, riseLocalHiC,
+      };
     }
 
     function formatLm(n) {
@@ -996,13 +1012,14 @@
       ctx.fillText(RING_W_CM + " cm  ·  corner R " + RING_R_CM + " cm", cx, dimY + 14);
 
       // HUD callouts
-      const boxX = w - 200;
-      const boxY = 24;
-      const boxH = 176;
-      ctx.fillStyle = "rgba(18, 23, 31, 0.82)";
+      const boxX = w - 210;
+      const boxY = 16;
+      const boxW = 196;
+      const boxH = 268;
+      ctx.fillStyle = "rgba(18, 23, 31, 0.88)";
       ctx.strokeStyle = "rgba(42, 53, 72, 0.9)";
       ctx.lineWidth = 1;
-      roundRect(ctx, boxX, boxY, 180, boxH, 10);
+      roundRect(ctx, boxX, boxY, boxW, boxH, 10);
       ctx.fill();
       ctx.stroke();
 
@@ -1020,27 +1037,70 @@
 
       ctx.font = "10px system-ui, sans-serif";
       ctx.fillStyle = "#6b7a94";
-      ctx.fillText("MIN BODY LUX", boxX + 14, boxY + 78);
+      ctx.fillText("MIN BODY LUX", boxX + 14, boxY + 76);
       // Target: min body lux > 700–800
       const minOk = r.weakLux >= 800;
       const minMarginal = r.weakLux >= 700 && r.weakLux < 800;
-      ctx.font = "700 18px system-ui, sans-serif";
+      ctx.font = "700 17px system-ui, sans-serif";
       ctx.fillStyle = minOk ? "#6ee7b7" : minMarginal ? "#fbbf24" : "#f87171";
-      ctx.fillText(formatLux(r.weakLux), boxX + 14, boxY + 98);
+      ctx.fillText(formatLux(r.weakLux), boxX + 14, boxY + 94);
       ctx.font = "10px system-ui, sans-serif";
       ctx.fillStyle = minOk ? "rgba(110,231,183,0.85)" : minMarginal ? "rgba(251,191,36,0.9)" : "rgba(248,113,113,0.9)";
-      ctx.fillText(minOk ? "target met  >700–800" : minMarginal ? "marginal  need >700–800" : "below target  >700–800", boxX + 14, boxY + 114);
+      ctx.fillText(minOk ? "target met  >700–800" : minMarginal ? "marginal  need >700–800" : "below target  >700–800", boxX + 14, boxY + 109);
 
-      ctx.font = "12px system-ui, sans-serif";
-      ctx.fillStyle = "#e8eef8";
-      ctx.fillText("exit " + formatLm(r.exitLm), boxX + 14, boxY + 134);
+      // Divider
+      ctx.strokeStyle = "rgba(42, 53, 72, 0.95)";
+      ctx.beginPath();
+      ctx.moveTo(boxX + 12, boxY + 120);
+      ctx.lineTo(boxX + boxW - 12, boxY + 120);
+      ctx.stroke();
+
+      // FRAME HEAT (heat.txt) — scales with LED current / power
+      const driveLabel = r.Iw === r.Ic
+        ? r.Iw + " mA"
+        : r.Iw + "/" + r.Ic + " mA";
+      ctx.font = "600 11px system-ui, sans-serif";
+      ctx.fillStyle = "#f0a070";
+      ctx.fillText("FRAME HEAT", boxX + 14, boxY + 138);
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#6b7a94";
+      ctx.fillText("per " + HEAT_SCAN_SEC + " s scan  ·  " + driveLabel, boxX + 14, boxY + 153);
+
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#6b7a94";
+      ctx.fillText("LED POWER → HEAT", boxX + 14, boxY + 172);
+      ctx.font = "700 16px system-ui, sans-serif";
+      ctx.fillStyle = "#fb923c";
+      ctx.fillText(r.powerW.toFixed(1) + " W", boxX + 14, boxY + 190);
+      ctx.font = "10px system-ui, sans-serif";
       ctx.fillStyle = "#8b9bb4";
-      ctx.font = "11px system-ui, sans-serif";
-      ctx.fillText(r.Iw + (r.Iw !== r.Ic ? "/" + r.Ic : "") + " mA · " + Math.round(state.efficiency * 100) + "% η", boxX + 14, boxY + 150);
+      ctx.fillText(Math.round(r.energyJ) + " J into Al frame", boxX + 88, boxY + 188);
+
+      // Combined 2 kg equalization rise (primary heat.txt metric)
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#6b7a94";
+      ctx.fillText("ΔT COMBINED 2 kg", boxX + 14, boxY + 208);
+      const heatOk = r.riseCombinedC < 0.5;
+      const heatWarm = r.riseCombinedC < 1.0;
+      ctx.font = "700 16px system-ui, sans-serif";
+      ctx.fillStyle = heatOk ? "#6ee7b7" : heatWarm ? "#fbbf24" : "#f87171";
+      ctx.fillText("+" + r.riseCombinedC.toFixed(2) + " °C", boxX + 14, boxY + 226);
+
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#8b9bb4";
+      ctx.fillText(
+        "internal 1 kg +" + r.riseInternalC.toFixed(2) + " °C  ·  local +" +
+          r.riseLocalLoC.toFixed(1) + "–" + r.riseLocalHiC.toFixed(1) + " °C",
+        boxX + 14,
+        boxY + 242
+      );
+
       ctx.fillStyle = "#ffb347";
-      ctx.fillText("140 warm", boxX + 14, boxY + 164);
+      ctx.fillText("140 warm", boxX + 14, boxY + 258);
       ctx.fillStyle = "#7ec8ff";
-      ctx.fillText("140 cool", boxX + 90, boxY + 164);
+      ctx.fillText("140 cool", boxX + 90, boxY + 258);
+      ctx.fillStyle = "#6b7a94";
+      ctx.fillText(Math.round(state.efficiency * 100) + "% η", boxX + 150, boxY + 258);
 
       // Target band indicator bar
       const barX = 24;
