@@ -998,29 +998,49 @@
       // HUD callouts
       const boxX = w - 200;
       const boxY = 24;
+      const boxH = 176;
       ctx.fillStyle = "rgba(18, 23, 31, 0.82)";
       ctx.strokeStyle = "rgba(42, 53, 72, 0.9)";
       ctx.lineWidth = 1;
-      roundRect(ctx, boxX, boxY, 180, 122, 10);
+      roundRect(ctx, boxX, boxY, 180, boxH, 10);
       ctx.fill();
       ctx.stroke();
 
       ctx.textAlign = "left";
       ctx.font = "600 11px system-ui, sans-serif";
       ctx.fillStyle = "#8b9bb4";
-      ctx.fillText("ON PERSON", boxX + 14, boxY + 22);
-      ctx.font = "700 22px system-ui, sans-serif";
+      ctx.fillText("ON PERSON", boxX + 14, boxY + 20);
+
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#6b7a94";
+      ctx.fillText("AVG BODY LUX", boxX + 14, boxY + 38);
+      ctx.font = "700 20px system-ui, sans-serif";
       ctx.fillStyle = "#a78bfa";
-      ctx.fillText(formatLux(r.avgLux), boxX + 14, boxY + 50);
+      ctx.fillText(formatLux(r.avgLux), boxX + 14, boxY + 58);
+
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = "#6b7a94";
+      ctx.fillText("MIN BODY LUX", boxX + 14, boxY + 78);
+      // Target: min body lux > 700–800
+      const minOk = r.weakLux >= 800;
+      const minMarginal = r.weakLux >= 700 && r.weakLux < 800;
+      ctx.font = "700 18px system-ui, sans-serif";
+      ctx.fillStyle = minOk ? "#6ee7b7" : minMarginal ? "#fbbf24" : "#f87171";
+      ctx.fillText(formatLux(r.weakLux), boxX + 14, boxY + 98);
+      ctx.font = "10px system-ui, sans-serif";
+      ctx.fillStyle = minOk ? "rgba(110,231,183,0.85)" : minMarginal ? "rgba(251,191,36,0.9)" : "rgba(248,113,113,0.9)";
+      ctx.fillText(minOk ? "target met  >700–800" : minMarginal ? "marginal  need >700–800" : "below target  >700–800", boxX + 14, boxY + 114);
+
       ctx.font = "12px system-ui, sans-serif";
       ctx.fillStyle = "#e8eef8";
-      ctx.fillText("exit " + formatLm(r.exitLm), boxX + 14, boxY + 74);
+      ctx.fillText("exit " + formatLm(r.exitLm), boxX + 14, boxY + 134);
       ctx.fillStyle = "#8b9bb4";
-      ctx.fillText(r.Iw + (r.Iw !== r.Ic ? "/" + r.Ic : "") + " mA · " + Math.round(state.efficiency * 100) + "% η", boxX + 14, boxY + 94);
+      ctx.font = "11px system-ui, sans-serif";
+      ctx.fillText(r.Iw + (r.Iw !== r.Ic ? "/" + r.Ic : "") + " mA · " + Math.round(state.efficiency * 100) + "% η", boxX + 14, boxY + 150);
       ctx.fillStyle = "#ffb347";
-      ctx.fillText("140 warm", boxX + 14, boxY + 112);
+      ctx.fillText("140 warm", boxX + 14, boxY + 164);
       ctx.fillStyle = "#7ec8ff";
-      ctx.fillText("140 cool", boxX + 90, boxY + 112);
+      ctx.fillText("140 cool", boxX + 90, boxY + 164);
 
       // Target band indicator bar
       const barX = 24;
